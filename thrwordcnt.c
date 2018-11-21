@@ -50,12 +50,6 @@ void assert(int successful, const char* message) {
 	}
 }
 
-int get_semaphore_value(const sem_t* semaphore) {
-	int value;
-	sem_getvalue(&task_semaphore, &value);
-	return value;
-}
-
 char* lower(char* input) {
 	for (int i = 0; i < strlen(input); i++) {
 		input[i] = tolower(input[i]);
@@ -109,18 +103,23 @@ void* search(struct output* result) {
     return NULL;
 }
 
+int get_next_task_id() {
+	sem_wait(&task_semaphore);
+	pthread_mutex_lock(&pool_lock);
+	int task_id = next_result_id;
+	next_result_id++;
+	pthread_mutex_unlock(&pool_lock);
+	sem_post(&vacancy_semaphore);
+	return task_id;
+}
+
 void* consume(void* arg) {
 	int worker_id = *(int*)arg;
 	int* keyword_count_pointer = (int*)malloc(sizeof(int));
 	*keyword_count_pointer = 0;
 	printf("Worker(%d) : Start up. Wait for task!\n", worker_id);
 	while (TRUE) {
-		sem_wait(&task_semaphore);
-		pthread_mutex_lock(&pool_lock);
-		int task_id = next_result_id;
-		next_result_id++;
-		pthread_mutex_unlock(&pool_lock);
-		sem_post(&vacancy_semaphore);
+		int task_id = get_next_task_id();
 		char* keyword = results[task_id].keyword;
 		if (strcmp(keyword, SENTINEL) == 0) {
 			break;
@@ -139,7 +138,6 @@ void produce() {
 	sem_wait(&vacancy_semaphore);
 	sem_post(&task_semaphore);
 }
-
 
 int main(int argc, char* argv[]) {
 	// Argument parsing
@@ -200,16 +198,21 @@ int main(int argc, char* argv[]) {
 			"Worker thread %d has terminated and completed %d tasks.\n",
 			i, *(int*)keyword_count_pointer
 		);
+		free(keyword_count_pointer);
 	}
 	for (int i = 0; i < line_count; i++) {
 		printf("%s : %d\n", results[i].keyword, results[i].count);
 	}
 	
-	free(results);
-
 	// Threading finalization
 	pthread_mutex_destroy(&pool_lock);
 	sem_destroy(&task_semaphore);
 	sem_destroy(&vacancy_semaphore);
+
+	// Variable finalization
+	free(results);
+	free(threads);
+	free(thread_ids);
+
 	return 0;
 }
