@@ -14,7 +14,7 @@ thrwordcnt_3035233228.zip: thrwordcnt_3035233228.c
 
 test: thrwordcnt
 	./$^ 2 3 samples/test1.txt samples/key1.txt | tee samples/output1.txt \
-	&& diff samples/output1.txt samples/reference1.txt 2>&1
+	&& tail samples/output1.txt -n 4 | diff samples/reference1.txt - 2>&1
 
 clean:
 	rm wordcnt0 thrwordcnt thrwordcnt_3035233228.c \
