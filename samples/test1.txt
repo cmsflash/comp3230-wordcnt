@@ -1,0 +1,1 @@
+child The wscanf function *child reads formatted process input subchild from the stream stdin under the control of the template child* string template. The subprocess optional arguments are pointers proce to child the places which Process receive the resulting values child.
